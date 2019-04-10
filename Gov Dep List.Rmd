@@ -1,0 +1,217 @@
+---
+title: "Gov Dep List"
+author: "Pat Healy"
+date: "27 March 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+#Samples for potential sources to create a list of government entities
+Hi Nathan and Paul. Here are a few samples of different sources and code to determine the best way to generate a list of government entities and to consider the level of detail we want to go into. 
+
+-Note for myself Commons_category_link_is_on_Wikidata is the first thing to exclude out, crawler opening this up every time. 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Loading required packages
+library(Rcrawler)
+library(rvest)
+library(stringr)
+library(dplyr)
+```
+
+
+#Source 1 Wikipedia 
+Using the Package R crawler to scrape a list of government entities from the wikipedia category "Government Agencies by Country"
+
+```{r}
+#This is a simplified version of the code that would be used to get an idea of what the data looks like.
+#This scrapes a lot of non-relevent data. Need to create some filters to ensure that irrelevant pages are not crawled. Use functions FUNPageFilter, KeywordsFilter or ExcludeCSSPat from the Rcrawler package.
+
+# Rcrawler(Website = "https://en.wikipedia.org/wiki/Category:Government_agencies_by_country",
+#          crawlUrlfilter  = "/wiki/Category",  ExtractCSSPat = c("#mw-pages h2, #mw-pages")) 
+```
+
+##List Sample
+I ran the crawler for approximately 2000 pages to generate a sample list (~30000 entities) for the Government Agencies Category. The packages starts to scrape some irrelevant information which I would need to filter out if we are to use this source.
+Loading a saved csv for the time being as the target for the crawler is potentially not closed with the current filter.
+
+
+
+```{r}
+#Loading CSV of Government Agencies list
+Gov_Entities_By_Country <- as.data.frame(read.csv("data/Government-Entities-Sample-List.csv"))
+```
+
+
+```{r}
+#Displaying as a HTML table
+library(DT)
+datatable(Gov_Entities_By_Country, options = list(pageLength = 20))
+
+```
+
+
+
+##Government Executive (Ministirial) by Country
+Sample of ministires for grouping by executive
+Needs to filtering if we decide to use this source
+
+```{r}
+# Rcrawler(Website = "https://en.wikipedia.org/wiki/Category:Ministries_by_country",
+#          crawlUrlfilter  = "/wiki/Category",  ignoreUrlParams =c("ministers"), ExtractCSSPat = c("#mw-pages h2, #mw-pages"))
+```
+
+```{r}
+#Loading CSV of Government Ministires list
+Gov_Ministries_By_Country <- as.data.frame(read.csv("data/gov-ministries-by-country.csv"))
+```
+
+```{r}
+#Displaying as a HTML table
+library(DT)
+datatable(Gov_Ministries_By_Country, options = list(pageLength = 20))
+```
+
+##Government Judicial Entities (courts) by country
+Just a sample for now, this will need some strict filterning to avoid scraping court rulings, laws and judges when using the crawler. 
+
+```{r}
+# Rcrawler(Website = "https://en.wikipedia.org/wiki/Category:Courts_by_country",
+#          crawlUrlfilter  = "/wiki/Category", ExtractCSSPat = c("#mw-pages h2, #mw-pages"))
+```
+
+```{r}
+#Loading CSV of Courts by Country list
+Courts_By_Country <- as.data.frame(read.csv("data/courts-by-country.csv"))
+```
+
+```{r}
+#Displaying as a HTML table
+library(DT)
+datatable(Courts_By_Country, options = list(pageLength = 20))
+```
+
+
+###Scraping entitity information from individual pages.
+If we want to include more information we can use the FUNPageFilter command in the Rcrawler package to crawl through the page for each entitity included in the list and scrape any additional information that might be useful.
+Some or possibly many pages do not contain any useful additional information.
+
+
+###Sorting the lists by category, continent and country
+We want to sort data by Judicial, Legilslative, Executive
+Using Law enforcment agencies as an example of one possible way to present lists within each category.
+Here the law enforcement entities are sorted by continent and then country. This can be used as a template for sorting within the broader categories. 
+
+
+
+```{r}
+#Scraping list of worlds law enforcement agencies from Wikipedia
+Rcrawler(Website = "https://en.wikipedia.org/wiki/List_of_law_enforcement_agencies",
+          crawlUrlfilter  = "/wiki/List_of_law_enforcement_agencies",
+         ExtractCSSPat = c("#content")) 
+```
+
+
+```{r}
+#Loading CSV of Law Enforcement Agencies list
+Law_Enforcemnet_Agencies_By_Country <- as.data.frame(read.csv("data/law-enforcement-agencies-list.csv"))
+```
+
+
+```{r}
+#Displaying as a HTML table
+library(DT)
+datatable(Law_Enforcemnet_Agencies_By_Country, options = list(pageLength = 20))
+
+```
+
+####List of Government owned Companies
+```{r}
+#Scraping list of worlds government owned companies from Wikipedia 
+#Might be useful
+Rcrawler(Website = "https://en.wikipedia.org/wiki/List_of_government-owned_companies",
+          crawlUrlfilter  = "/wiki/List_of_government-owned_companies",
+         ExtractCSSPat = c("#content")) 
+```
+
+####List of Intellegence agencies by country
+```{r}
+#Scraping list of worlds intellegence agencies from Wikipedia 
+#Might be useful
+Rcrawler(Website = "https://en.wikipedia.org/wiki/List_of_intelligence_agencies",
+          crawlUrlfilter  = "/wiki/List_of_intelligence_agencies",
+         ExtractCSSPat = c("#content")) 
+```
+
+####List of Central Banks by Country
+
+```{r}
+#Scraping list of worlds central banks from Wikipedia 
+#Might be useful
+Rcrawler(Website = "https://en.wikipedia.org/wiki/List_of_central_banks",
+          crawlUrlfilter  = "/wiki/List_of_central_banks",
+         ExtractCSSPat = c("#content")) 
+```
+
+
+#An example of more in depth information for Australian Government Entities
+Later on we might look to include more information about government entities, such as Address and lat/long coordinates. Using a spreadsheet from Australian Government as an example "https://www.finance.gov.au/resource-management/governance/australian-government-organisations-register/"
+
+```{r}
+#Loading DataFrame of Aus Gov Departments for 2019
+aus.gov.dep <- as.data.frame( read.csv("data/agor-spreadsheet-of-bodies-2019-01-01.csv"))
+#retrieved from:
+
+```
+```{r}
+#Combining Street,Suburb,State
+aus.gov.dep$Head.Office.Street.Address.Suburb.State = paste(aus.gov.dep$Head.Office.Street.Address, aus.gov.dep$Head.Office.Suburb, aus.gov.dep$Head.Office.State, sep=", ")
+```
+
+
+
+```{r}
+# Geocoding a csv column of "addresses" in R
+
+# #load ggmap
+# library(ggmap)
+# 
+# 
+# #Google API Key
+# register_google(key = "...")
+# 
+# # Initialize the data frame
+# geocoded <- data.frame(stringsAsFactors = FALSE)
+# 
+# # Loop through the addresses to get the latitude and longitude of each address and add it to the
+# # aus.gov.dep data frame in new columns lat and lon
+# for(i in 1:nrow(aus.gov.dep))
+# {
+#   # Print("Working...")
+#   result <- geocode(aus.gov.dep$Head.Office.Street.Address.Suburb.State[i], output = "latlona", source = "google")
+#   aus.gov.dep$lon[i] <- as.numeric(result[1])
+#   aus.gov.dep$lat[i] <- as.numeric(result[2])
+# }
+```
+
+
+
+```{r}
+
+#Trying to filter out commons category
+
+
+# Rcrawler(Website = "https://en.wikipedia.org/wiki/Category:Government_agencies_by_country",
+#          crawlUrlfilter  = "/wiki/Category", 
+#          ignoreUrlParams = c("/wiki/Category:Commons_category_link_is_on_Wikidata"),  
+#          ExtractCSSPat = c("#mw-pages h2, #mw-pages"))
+```
+
+
+```{r}
+
+```
+
