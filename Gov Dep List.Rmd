@@ -212,6 +212,66 @@ aus.gov.dep$Head.Office.Street.Address.Suburb.State = paste(aus.gov.dep$Head.Off
 
 
 ```{r}
+library(pdftools)
+library(stringr)
+library(xlsx)
 
+text <- pdf_text("data/CIA/April2006ChiefsDirectory.pdf")
+test <- as.data.frame(text)
+
+test2 <- unlist(str_split(test, "[\\r\\n]+"))
+test3 <- str_split_fixed(str_trim(test2), "\\s{2,}", 5)
+
+cia <- as.data.frame(test3)
 ```
+
+```{r}
+library(tabulizer)
+
+mw_table <- extract_tables(
+  "https://www.cia.gov/library/publications/resources/world-leaders-1/pdfs/2019/January2019ChiefsDirectory.pdf",
+  output = "data.frame",
+  pages = c(4:241),
+  guess = FALSE
+  )
+
+
+
+head(mw_table[[222]])
+```
+
+```{r}
+mw_df <- as.data.frame(unlist(mw_table))
+library(DT)
+datatable(mw_table, options = list(pageLength = 20))
+```
+
+
+```{r}
+#Creating Path For Java 64 Bit
+#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jdk1.7.0_51\\jre')
+```
+
+
+```{r}
+install.packages("ghit")
+
+library(ghit)
+
+ghit::install_github(c("leeper/tabulizerjars", "leeper/tabulizer"), INSTALL_opts = "--no-multiarch", dependencies = c("Depends", "Imports"))
+```
+
+```{r}
+install.packages("tabulizer")
+```
+
+
+<!-- ```{r} -->
+<!-- bitmap <- pdf_render_page("data/CIA/April2006ChiefsDirectory.pdf") -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- library(readtext) -->
+<!-- df <- readtext("data/CIA/*.pdf") -->
+<!-- ``` -->
 
