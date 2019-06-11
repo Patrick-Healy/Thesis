@@ -241,11 +241,18 @@ head(mw_table[[222]])
 ```
 
 ```{r}
-mw_df <- as.data.frame(unlist(mw_table))
-library(DT)
-datatable(mw_table, options = list(pageLength = 20))
+write.csv(mw_table[[1]], "mydata.csv")
+```
+```{r}
+april_2019_chiefs <- as.data.frame(read.csv("data/CIA csv/April2019ChiefsDirectory.csv"))
+jan_2019_chiefs <- as.data.frame(read.csv("data/CIA csv/January2019ChiefsDirectory.csv"))
 ```
 
+```{r}
+library(dplyr)
+
+
+```
 
 ```{r}
 #Creating Path For Java 64 Bit
