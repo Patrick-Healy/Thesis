@@ -1,0 +1,24 @@
+---
+title: "Sorting CIA list"
+author: "Pat Healy"
+date: "25 June 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(purrr)
+```
+
+
+```{r}
+setwd("Entity/CIAcsv")
+fnames <- list.files()
+csv <- lapply(fnames, read.csv)
+result <- do.call(rbind, csv)
+
+```
+
