@@ -1,0 +1,129 @@
+---
+title: "uk gov edits analysis"
+author: "Pat Healy"
+date: "22 October 2019"
+output: html_document
+---
+
+#analyis of uk gov edits
+
+```{r}
+#read in uk gov edits
+library(data.table)
+library(utf8)
+uk_gov_edits <- fread(file = "data/uk_gov_edits_ten_pc.csv", encoding = "UTF-8")
+
+```
+
+##fix up timestamps
+```{r}
+library(stringr)
+#replace year with 2019
+pats <- c("2000|2001|2002|2003|2004|2005|2006|2007|2008|2009|2010|2011|2012|2013|2014|2015|2016|2017|2018")
+
+uk_gov_edits$timestamp <- str_replace_all(uk_gov_edits$timestamp, pats, '2019')
+```
+
+```{r}
+#local time of edit
+#For the purpose of this exploration, UK only has one timezone
+library(purrr)
+library(lubridate)
+#pos<- parse_date_time(dbip_wikiedits_joined$timestamp, orders = "mdy HM")
+time_uk <- ymd_hms(uk_gov_edits$timestamp, tz = "Europe/London")
+uk_gov_edits <- cbind(uk_gov_edits, time_uk)
+```
+```{r}
+#remove na's
+uk_gov_edits <- na.omit(uk_gov_edits) 
+```
+
+
+```{r}
+#local day of edit
+#converting date to day for clustering
+edit_day <- weekdays(as.Date(uk_gov_edits$time_uk,'Europe/London'))
+uk_gov_edits <- cbind(uk_gov_edits, edit_day)
+```
+##Time percentange of edit plots
+```{r}
+#Time of day and day of week percentage of edits.
+#Step 1 group by time of day and day of week in a new df
+#Step 2 create count for each day and then for each hour with a column for total
+#step 3 slice and plot.
+time_dbip_wiki <- uk_gov_edits
+time_dbip_wiki <- time_dbip_wiki %>%
+  mutate(hour_of_day = hour(time_uk))
+```
+```{r}
+#new df for weekday
+weekday_dbip_wiki <- time_dbip_wiki %>% arrange(edit_day)
+#new dataframe for time of day
+hour_of_day_dbip_wiki <- time_dbip_wiki %>% arrange(hour_of_day)
+```
+```{r}
+#count of day of week then slice
+weekday_dbip_wiki<-
+  weekday_dbip_wiki %>% 
+  group_by(edit_day) %>% 
+  mutate(count = n())
+weekday_dbip_wiki <- weekday_dbip_wiki[!duplicated(weekday_dbip_wiki$edit_day),]
+#Order by days of week
+weekday_dbip_wiki$edit_day <- ordered(weekday_dbip_wiki$edit_day , levels=c("Monday", "Tuesday", "Wednesday", "Thursday", 
+"Friday", "Saturday", "Sunday"))
+weekday_dbip_wiki<-weekday_dbip_wiki[order(weekday_dbip_wiki$edit_day), ]
+
+#Create percentage column day count/total count
+weekday_dbip_wiki$dow_percent<- prop.table(weekday_dbip_wiki$count)
+```
+```{r}
+library(ggplot2)
+```
+
+```{r}
+#Plot days of week percentage
+ggplot(weekday_dbip_wiki, aes(x = edit_day, y = dow_percent)) + geom_bar(stat = "identity")
+```
+
+
+
+##Hour of day percentage
+```{r}
+#count of time of day then slice
+hour_of_day_dbip_wiki<-
+  hour_of_day_dbip_wiki %>% 
+  group_by(hour_of_day) %>% 
+  mutate(count = n())
+hour_of_day_dbip_wiki <- hour_of_day_dbip_wiki[!duplicated(hour_of_day_dbip_wiki$hour_of_day),]
+#Order by hour of day
+
+
+#Create percentage column day count/total count
+hour_of_day_dbip_wiki$hod_percent<- prop.table(hour_of_day_dbip_wiki$count)
+```
+```{r}
+#Plot hour of day perccentage
+#could do with some smoothing
+ggplot(hour_of_day_dbip_wiki, aes(x = hour_of_day, y = hod_percent)) + geom_path(stat = "identity") + geom_point(stat = "identity") 
+```
+
+```{r}
+ggplot(hour_of_day_dbip_wiki, aes(x = hour_of_day, y = hod_percent)) + geom_smooth()
+```
+
+
+
+#maps
+```{r}
+library(maps)
+library(mapdata)
+map('worldHires',
+		c('UK', 'Ireland', 'Scotland', 'Isle of Man','Isle of Wight'),
+		xlim=c(-11,3), ylim=c(49,60.9))
+points(uk_gov_edits$lon, uk_gov_edits$lat, col = "red", cex = .6)
+```
+
+
+
+
+

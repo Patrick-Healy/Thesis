@@ -1,0 +1,41 @@
+---
+title: "fixing timestamp"
+author: "Pat Healy"
+date: "22 October 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr) 
+library(data.table)
+library(utf8)
+file1 <- fread(file = "10pc/file1.csv", encoding = "UTF-8")
+file2 <- fread(file = "10pc/file2.csv", encoding = "UTF-8")
+file3 <- fread(file = "10pc/file3.csv", encoding = "UTF-8")
+file4 <- fread(file = "10pc/file4.csv", encoding = "UTF-8")
+file5 <- fread(file = "10pc/file5.csv", encoding = "UTF-8")
+file6 <- fread(file = "10pc/file6.csv", encoding = "UTF-8")
+file7 <- fread(file = "10pc/file7.csv", encoding = "UTF-8")
+file8 <- fread(file = "10pc/file8.csv", encoding = "UTF-8")
+file9 <- fread(file = "10pc/file9.csv", encoding = "UTF-8")
+
+```
+
+```{r}
+#list dataframes
+my.list <- list(file1, file2, file3, file4, file4, file6, file7, file8, file9)
+```
+```{r}
+anon_ten_pc <- do.call("rbind", my.list)
+```
+
+
+```{r}
+#take edit id as vector
+revision_id <- uk_gov_edits[["revision_id"]]
+```
+

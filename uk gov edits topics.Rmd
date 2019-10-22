@@ -1,0 +1,90 @@
+---
+title: "uk gov edits topics"
+author: "Pat Healy"
+date: "22 October 2019"
+output: html_document
+---
+```{r}
+uk_gov_edits_unique_pages <- uk_gov_edits %>% 
+  group_by(page_id) %>%
+  slice(1) %>% # takes the first occurrence if there is a tie
+  ungroup()
+```
+
+
+##Word cloud quanteda
+```{r}
+#Load Quanteda
+library(quanteda)
+```
+
+```{r}
+
+#construct a corpus
+page_title<-setNames(as.character(uk_gov_edits_unique_pages$page_title),
+                     uk_gov_edits_unique_pages$page_title)
+
+corp_edits <- corpus(page_title,
+                     docvars = data.frame(page = names(page_title)))
+
+```
+
+```{r}
+page_title_toks <- tokens(char_tolower(page_title), remove_punct = TRUE)
+```
+
+
+```{r}
+page_title_toks_nostop <- tokens_select(page_title_toks, pattern = stopwords('en'), 
+                                        selection = 'remove', padding = TRUE)
+head(page_title_toks_nostop[[1]], 50)
+```
+```{r}
+page_title_toks1 <- tokens(char_tolower(page_title), remove_punct = TRUE)
+page_title_toks2 <- tokens_remove(page_title_toks1, stopwords("english"))
+page_title_toks3 <- tokens_ngrams(page_title_toks2, 2)
+dfmat1<-(dfm(page_title_toks3)) %>%
+   dfm_trim(min_termfreq = 5)
+```
+```{r}
+print(dfmat1)
+```
+
+```{r}
+
+
+# basic wordcloud
+textplot_wordcloud(dfmat1)
+
+```
+
+##Topic modelling
+
+```{r}
+tm_page_title_toks1 <- tokens(char_tolower(page_title), remove_punct = TRUE)
+tm_page_title_toks2 <- tokens_remove(tm_page_title_toks1, stopwords("english"))
+tm_page_title_toks3 <- tokens_ngrams(tm_page_title_toks2, 3)
+tm_dfmat1<-(dfm(tm_page_title_toks3)) %>%
+   dfm_trim(min_termfreq = 1)
+```
+
+
+```{r}
+#topic modelling
+#also requires lubridae package
+library(lubridate)
+library(topicmodels)
+dtm <- convert(tm_dfmat1, to = "topicmodels")
+lda <- LDA(dtm, k = 10)
+```
+
+```{r}
+#might be better with bigrams
+terms(lda, 5)
+```
+```{r}
+topics<-as.data.frame(terms(lda, 5))
+```
+
+
+

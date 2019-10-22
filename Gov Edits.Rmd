@@ -141,3 +141,11 @@ uk_gov_edits$comment <- gsub("\\|", "", uk_gov_edits$comment)
 write.csv(uk_gov_edits, file = "data/uk_gov_edits.csv", fileEncoding = "UTF-8")
 ```
 
+```{r}
+uk_gov_edits_ten_pc <- uk_gov_edits[ -c(1, 4) ]
+
+```
+```{r}
+write.csv(uk_gov_edits_ten_pc, file = "data/uk_gov_edits_ten_pc.csv", fileEncoding = "UTF-8")
+```
+

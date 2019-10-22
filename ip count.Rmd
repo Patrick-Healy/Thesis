@@ -1,0 +1,198 @@
+---
+title: "new data"
+author: "Pat Healy"
+date: "16 October 2019"
+output: html_document
+---
+
+```{r}
+library(data.table)
+library(utf8)
+dbip <- fread(file = "Data/dbip_2019-05_w_ipcounts.csv", encoding = "UTF-8")
+
+```
+```{r}
+#error in fread names, renaming columns
+setnames(dbip, old = c('V1', 'ip_start', 'ip_end', 'lat', 'lon', 'ip_range_id', 'timezone_offset', 'timezone_name', 'isp_name', 'owner_name', 'gid', 'id_0', 'iso', 'name_0', 'id_1', 'name_1', 'id_2', 'name_2  num_ips_expanded'), new = c('ip_start', 'ip_end', 'lat', 'lon', 'ip_range_id', 'timezone_offset', 'timezone_name', 'isp_name', 'owner_name', 'gid', 'id_0', 'iso', 'name_0', 'id_1', 'name_1', 'id_2', 'name_2',  'num_ips_expanded'))
+```
+
+```{r}
+library(dplyr)
+GBR <- c("GBR")
+UK_dbip_single<-filter(dbip, iso %in% GBR )
+```
+```{r}
+ #remove empty cells
+UK_dbip_single <- UK_dbip_single[!(UK_dbip_single$owner_name == ""), ]
+```
+
+```{r}
+UK_dbip_single <- UK_dbip_single %>% 
+  group_by(owner_name) %>% 
+  slice(1) %>% 
+  ungroup()
+```
+```{r}
+#some sample revision ids
+revision_id_dbip <- fread(file="data/dbip-wikiedits-joined-edit-quality.csv")
+revision_id_dbip <- revision_id_dbip[1:909,]
+revision_id<-revision_id_dbip[['revision_id']]
+
+
+```
+
+
+
+good<-foreach(i=revision_id) %dopar% g(i,30)
+
+ g<-function(i, k) {
+  
+    ores::check_goodfaith("enwiki", i) %>%
+    rbind.data.frame( . ) -> returnthis
+    
+    pausefunction( k )
+    return(returnthis)
+  
+  }
+
+for(j in 1:50){
+    Sys.sleep(2.6)
+}
+
+```{r}
+library(ratelimitr)
+library(foreach)
+f <- function() NULL
+
+# create a version of f that can only be called 50 times per 20 seconds
+f_lim <- limit_rate(f, rate(n = 50, period = 20))
+ ptime <- system.time({
+good<-foreach(i=revision_id) %do%{
+  f_lim()
+  rbind.data.frame(ores::check_goodfaith("enwiki", i))
+}
+})
+ ptime
+```
+```{r}
+good<-do.call("rbind", good)
+```
+
+```{r}
+ptime2 <- system.time({
+good<-foreach(i=revision_id) %do%
+  rbind.data.frame(ores::check_goodfaith("enwiki", i))
+
+})
+ ptime2
+```
+
+```{r}
+entity_types <- fread(file = "data/db_ip_entity_types.csv", encoding = "UTF-8")
+```
+
+```{r}
+library(dplyr)
+GBR <- c("GBR")
+GOV <- c("GOV")
+UK_dbip_entity_types<-filter(entity_types, iso %in% GBR )
+UK_dbip_entity_types<-filter(UK_dbip_entity_types, entity_type %in% GOV )
+```
+```{r}
+library(utf8)
+write.csv(UK_dbip_entity_types, file = "data/UK_dbip_entity_types.csv", fileEncoding = "UTF-8")
+```
+
+```{r}
+UK_dbip_entity_types <- UK_dbip_entity_types %>% 
+  group_by(owner_name) %>% 
+  slice(1) %>% 
+  ungroup()
+```
+```{r}
+#how many schools
+school <- dplyr::filter(UK_dbip_entity_types, grepl('dental', owner_name))
+```
+```{r}
+edu <- dplyr::filter(UK_dbip_entity_types, grepl('college|College|University|university', owner_name))
+```
+
+```{r}
+#remove schools from data
+UK_dbip_entity_types_good <- dplyr::filter(UK_dbip_entity_types, 
+                                      !grepl('school|School|college|College|University|university|prison|opticians|hospice|rsdedi|surgery|academy|labaratory|retreat|veterinary|bmtid|elementary|secondary|faculty|holiday|dental', owner_name))
+```
+```{r}
+UK_dbip_entity_types_let <- dplyr::filter(UK_dbip_entity_types, !grepl('[^A-Za-z]', owner_name))
+```
+
+```{r}
+UK_dbip_entity_types_num <- dplyr::filter(UK_dbip_entity_types, grepl('^[0-9-]+$', owner_name))
+```
+
+```{r}
+rsdedi <- dplyr::filter(UK_dbip_entity_types, grepl('rsdedi', owner_name))
+```
+
+```{r}
+#filter by row id from manually deleted missclassified owners
+
+#read in reduced data
+reduced <- fread(file = "data/UK_dbip_entity_types_reduced.csv")
+
+#rename first column ID
+names(reduced)[1]<-"ID"
+
+#Create as a vector
+ID2 <- reduced[["ID"]]
+```
+
+```{r}
+#Assign row numbers as column
+
+UK_dbip_entity_types$ID <- seq.int(nrow(UK_dbip_entity_types))
+```
+
+```{r}
+UK_dbip_entity_types_reduced <- filter(UK_dbip_entity_types, ID %in% ID2 )
+#take owner name as a vector
+o_n <- UK_dbip_entity_types_reduced[["owner_name"]]
+```
+
+```{r}
+#have a lower case column of owner_name
+UK_dbip_single$owner_name_lower <- tolower(UK_dbip_single$owner_name)
+#filter gov owenr names in UK_dbip_single
+UK_dbip_single_Gov<-filter(UK_dbip_single, owner_name_lower %in% o_n )
+```
+
+```{r}
+#writing ranges to txt file
+minip<-UK_dbip_single_Gov[['ip_start']]
+maxip<-UK_dbip_single_Gov[['ip_end']]
+range_id<-UK_dbip_single_Gov[['ip_range_id']]
+```
+```{r}
+#creating to see if I need 4 columns
+n <- 34372
+v <- rep(1, n)
+```
+```{r}
+ip_ranges <- as.data.table(cbind(range_id,v, minip, maxip))
+```
+
+```{r}
+ip_ranges <- transform(ip_ranges, range=paste(minip, maxip, sep="-"))
+
+ip_ranges <- subset(ip_ranges, select = -c(maxip))
+```
+
+```{r}
+write.table(ip_ranges, file = "Gov_ranges.txt", sep = ",", row.names = FALSE)
+```
+
+```{r}
+countingip <- fread(file = "data/UK_dbip_entity_types_reduced.csv", encoding = "UTF-8")
+```
+
+
