@@ -1,0 +1,67 @@
+---
+title: "10 pc edits merge and pull ip"
+author: "Pat Healy"
+date: "21 October 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr) 
+library(data.table)
+library(utf8)
+file1 <- fread(file = "10pc/file1.csv", encoding = "UTF-8")
+file2 <- fread(file = "10pc/file2.csv", encoding = "UTF-8")
+file3 <- fread(file = "10pc/file3.csv", encoding = "UTF-8")
+file4 <- fread(file = "10pc/file4.csv", encoding = "UTF-8")
+file5 <- fread(file = "10pc/file5.csv", encoding = "UTF-8")
+file6 <- fread(file = "10pc/file6.csv", encoding = "UTF-8")
+file7 <- fread(file = "10pc/file7.csv", encoding = "UTF-8")
+file8 <- fread(file = "10pc/file8.csv", encoding = "UTF-8")
+file9 <- fread(file = "10pc/file9.csv", encoding = "UTF-8")
+
+```
+
+```{r}
+#list dataframes
+my.list <- list(file1, file2, file3, file4, file4, file6, file7, file8, file9)
+```
+```{r}
+anon_ten_pc <- do.call("rbind", my.list)
+```
+```{r}
+write.csv(anon_ten_pc, file = "10pc/anon-10pc.csv", fileEncoding = "UTF-8")
+```
+
+```{r}
+#take ips as vector and save as.txt file for matching with grep
+anon_ten_pc_ip <- anon_ten_pc[["V6"]]
+anon_ten_pc_ip <- as.data.table(anon_ten_pc_ip)
+```
+
+```{r}
+write.table(anon_ten_pc_ip, file = "anon_ten_pc_ip.txt", sep = "\t", row.names = FALSE)
+```
+
+```{r}
+check <- fread(file = "10pc/anon-10pc.csv", encoding = "UTF-8")
+```
+```{r}
+check_unique <- check %>%
+  group_by(V6) %>%
+  slice(1) %>%
+  ungroup
+```
+
+```{r}
+anon_ten_pc_ip_single <- check_unique[["V6"]]
+anon_ten_pc_ip_single <- as.data.table(anon_ten_pc_ip_single)
+```
+
+```{r}
+write.table(anon_ten_pc_ip_single, file = "anon_ten_pc_ip_single.txt", sep = "\t", row.names = FALSE)
+```
+

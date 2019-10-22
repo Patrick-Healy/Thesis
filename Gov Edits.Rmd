@@ -1,0 +1,143 @@
+---
+title: "Gov Edits"
+author: "Pat Healy"
+date: "22 October 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Read in 10pc edits sample
+```
+
+```{r}
+#read in grep mathces
+library(data.table)
+matched_df <- fread(file = "data/anon_gov_edits.csv")
+```
+
+```{r}
+#take matched ips as a character vector 
+ipsgov<-matched_df[['V3']]
+```
+```{r}
+#problem with 2 columns called V1
+names(check)[1]<-"x"
+names(check_unique)[1]<-"x"
+```
+
+```{r}
+#map ips to contributor_id in wiki_edits_sample
+tenpc_sample_matched<-filter(check, V6 %in% ipsgov )
+```
+```{r}
+
+```
+
+```{r}
+#Load gov edits
+library(utf8)
+dbip <- fread(file = "Data/dbip_2019-05_w_ipcounts.csv", encoding = "UTF-8")
+
+```
+```{r}
+#error in fread names, renaming columns
+setnames(dbip, old = c('V1', 'ip_start', 'ip_end', 'lat', 'lon', 'ip_range_id', 'timezone_offset', 'timezone_name', 'isp_name', 'owner_name', 'gid', 'id_0', 'iso', 'name_0', 'id_1', 'name_1', 'id_2', 'name_2  num_ips_expanded'), new = c('ip_start', 'ip_end', 'lat', 'lon', 'ip_range_id', 'timezone_offset', 'timezone_name', 'isp_name', 'owner_name', 'gid', 'id_0', 'iso', 'name_0', 'id_1', 'name_1', 'id_2', 'name_2',  'num_ips_expanded'))
+```
+
+```{r}
+library(dplyr)
+GBR <- c("GBR")
+UK_dbip<-filter(dbip, iso %in% GBR )
+```
+
+```{r}
+#renaming wiki edits columns
+names(tenpc_sample_matched)[2]<-"page_id"
+names(tenpc_sample_matched)[3]<-"page_title"
+names(tenpc_sample_matched)[4]<-"y"
+names(tenpc_sample_matched)[5]<-"revision_id"
+names(tenpc_sample_matched)[6]<-"timestamp"
+names(tenpc_sample_matched)[7]<-"contributor_id"
+names(tenpc_sample_matched)[8]<-"contributor_name"
+names(tenpc_sample_matched)[9]<-"comment"
+names(tenpc_sample_matched)[10]<-"minor"
+names(tenpc_sample_matched)[10]<-"bytes"
+
+```
+
+```{r}
+#left join range id to tenpc_sample_matched
+#renaming ip address as contributor_id for left joing
+colnames(matched_df)[1] <- "ip_range_id"
+colnames(matched_df)[3] <- "contributor_id"
+
+matched_df2 <- matched_df %>%
+   select(ip_range_id, contributor_id)
+
+
+#left join range_id to wiki_edits_sample_matched
+joined_data <- left_join(tenpc_sample_matched, matched_df2, by = "contributor_id")
+```
+```{r}
+
+```
+
+```{r}
+#rename incorrect columns again
+names(joined_data)[10]<-"minor"
+names(joined_data)[11]<-"bytes"
+```
+```{r}
+#left join dbip to joined data by range_id
+#take range_id as a character vector. For this example range_id is row number
+ip_range_id2<-joined_data[['ip_range_id']]
+```
+
+```{r}
+#filter uk range id
+UK_dbip_semi_matched<-filter(UK_dbip, ip_range_id %in% ip_range_id2 )
+```
+
+```{r}
+#filter out Vmcbbuk
+UK_dbip_semi_matched <- dplyr::filter(UK_dbip_semi_matched, !grepl('Vmcbbuk', owner_name))
+#filter out virgin media
+UK_dbip_semi_matched <- dplyr::filter(UK_dbip_semi_matched, !grepl('Virgin', owner_name))
+```
+
+```{r}
+#save unfiltered
+write.csv(UK_dbip_semi_matched, file = "data/matched_uk_gov.csv", fileEncoding = "UTF-8" )
+```
+
+```{r}
+#read in fitered
+UK_dbip_matched <- fread(file = "data/matched_uk_gov_filtered.csv", encoding =  "UTF-8")
+```
+
+```{r}
+setnames(UK_dbip_matched, old = c('V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19'), new = c('x', 'ip_start', 'ip_end', 'lat', 'lon', 'ip_range_id', 'timezone_offset', 'timezone_name', 'isp_name', 'owner_name', 'gid', 'id_0', 'iso', 'name_0', 'id_1', 'name_1', 'id_2', 'name_2',  'num_ips_expanded'))
+```
+
+
+
+```{r}
+#left join dbip and edits
+uk_gov_edits <- inner_join(joined_data, UK_dbip_matched, by = "ip_range_id")
+```
+
+```{r}
+#remove '|' from page_title and comments. 
+uk_gov_edits$page_title <- gsub("\\|", "", uk_gov_edits$page_title)
+uk_gov_edits$comment <- gsub("\\|", "", uk_gov_edits$comment)
+```
+
+```{r}
+#save uk_gov_edits
+write.csv(uk_gov_edits, file = "data/uk_gov_edits.csv", fileEncoding = "UTF-8")
+```
+
