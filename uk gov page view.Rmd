@@ -1,0 +1,211 @@
+---
+title: "page views"
+author: "Pat Healy"
+date: "22 October 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#read in uk gov edits
+library(data.table)
+library(utf8)
+uk_gov_edits <- fread(file = "data/uk_gov_edits_ten_pc.csv", encoding = "UTF-8")
+
+```
+
+```{r}
+#local time of edit
+#For the purpose of this exploration, UK only has one timezone
+library(purrr)
+library(lubridate)
+#pos<- parse_date_time(uk_gov_edits$timestamp, orders = "mdy HM")
+time_uk <- ymd_hms(uk_gov_edits$timestamp, tz = "Europe/London")
+uk_gov_edits <- cbind(uk_gov_edits, time_uk)
+```
+```{r}
+#remove na's
+uk_gov_edits <- na.omit(uk_gov_edits) 
+```
+
+
+#pageviews
+```{r}
+#measuring reach for each editor for each page from the first time they edited that page.
+reach_author <- uk_gov_edits%>%
+            arrange(owner_name, page_title, time_uk) %>%
+            group_by(owner_name, page_title) 
+reach_author <-reach_author[!duplicated(reach_author[,c('owner_name','page_title')]),]
+```
+
+
+```{r}
+#slice unique page titles by the earliest edit of each page title
+
+
+earliest_edits <- uk_gov_edits %>% 
+  group_by(page_title, owner_name) %>% 
+  filter(time_uk == min(time_uk)) %>% 
+  slice(1) %>% # takes the first occurrence if there is a tie
+  ungroup()
+
+
+
+date_gm <- ymd_hms(earliest_edits$timestamp, tz = "GMT")
+earliest_edits <- cbind.data.frame(earliest_edits, date_gm)
+earliest_edits <- earliest_edits %>% mutate(date_gmt = as.Date(date_gm, "%m/%d/%Y")) %>%
+  suppressWarnings()
+date_gmt <- earliest_edits[['date_gmt']]
+earliest_edits$date_gmt <- NULL
+date_gmt <- as.character(date_gmt)
+date_gmt<-gsub('-', '', date_gmt)
+earliest_edits <- cbind.data.frame(earliest_edits, date_gmt)
+#COnverting time for page title format
+
+#Create a vector of unique page titles
+unique_page_titles <- uk_gov_edits %>% 
+  group_by(page_title) %>% 
+  slice(1) %>% # takes the first occurrence if there is a tie
+  ungroup()
+page_titles <- unique_page_titles[["page_title"]]
+
+page_titles <- as.character(page_titles)
+
+
+#creating a vector of monthYear
+time_uk <- earliest_edits[["time_uk"]]
+time_uk<-gsub('.{6}$', '', time_uk)
+time_uk<-gsub('-', '', time_uk)
+time_uk<-gsub(' ', '', time_uk)
+time_uk <- as.character(time_uk)
+
+```
+
+```{r}
+uk_gov_edits %>%
+  ungroup()
+vec_pt<-uk_gov_edits[['page_title']]
+vec_pt<-vec_pt[!duplicated(vec_pt)]
+
+
+```
+
+
+
+
+```{r}
+#using a foreach function to get all pageviews for every article edited from the start of 2017
+
+#
+library(doFuture)
+registerDoFuture()
+plan(multiprocess)
+
+
+
+
+
+article_pageviews<-foreach(i=page_titles)  %dopar% {
+  rbind.data.frame( pageviews::article_pageviews(project = "en.wikipedia",
+                  article = i, platform = "all",
+                  user_type = "all", start = "2017010100", end = "2019123100", reformat = TRUE))
+                   }
+article_pageviews<-do.call("rbind", article_pageviews)
+```
+
+#reach
+```{r warning=FALSE}
+
+
+#creating yet another timestamp format for querying page views
+date_gmt <- ymd_hms(reach_author$timestamp, tz = "GMT")
+reach_author <- cbind.data.frame(reach_author, date_gmt)
+reach_author <- reach_author %>% mutate(date_gmt = as.Date(date_gmt, "%m/%d/%Y")) %>%
+  suppressWarnings()
+```
+
+```{r}
+#create a count of pageviews after a certain day
+#If we want to get more specific we could do after hour
+article_pageviews <- article_pageviews%>%
+  group_by(article)%>%
+  mutate(cum_sum_views = cumsum(views)) %>%
+  mutate(total_views = sum(views)) %>%
+  mutate(views_after = total_views - cum_sum_views) %>%
+  ungroup
+```
+```{r}
+#rename article to page title and date to date_gmt
+colnames(article_pageviews)[3] <- "page_title"
+colnames(article_pageviews)[7] <- "date_gmt"
+
+
+```
+
+```{r}
+#drop columns not needed
+keeps <- c("page_title", "date_gmt", "views_after")
+merge_views <- article_pageviews[keeps]
+
+
+```
+```{r}
+#coerce date to Date format
+#merge_views<-merge_views %>%
+   #mutate(date_gmt=as.Date(date_gmt, format = "%d.%m.%Y")) 
+
+```
+```{r}
+
+
+#removing - from date_gmt for merge_views
+merge_views$date_gmt <- gsub("-", "", merge_views$date_gmt)
+```
+
+```{r}
+#change date_gmt in earliest edits to character
+earliest_edits$date_gmt = as.character(earliest_edits$date_gmt)
+```
+
+```{r}
+#the issue was caused by haveing " " instead of "_" in the earliest edits data
+#Fixing that up
+earliest_edits$page_title <- gsub(" ", "_", earliest_edits$page_title)
+
+reach_author_views <- left_join(earliest_edits, merge_views, by = c("page_title", "date_gmt"), 
+                                all.x = TRUE)
+```
+
+```{r}
+#Sum page views per owner
+reach_author_views <- reach_author_views %>%
+  group_by(owner_name) %>%
+  mutate(total_views = sum(views_after)) %>%
+  ungroup
+
+#slice for individual owners
+total_reach_author_views <- reach_author_views %>% 
+  group_by(owner_name) %>% 
+  slice(1) %>% 
+  ungroup()
+
+
+#take columns owner and total reach and merge this to uk_edit_quality
+df_merge <- data.frame(total_reach_author_views$owner,
+                       total_reach_author_views$total_views)
+
+names(df_merge) <- c("owner", "total_views")
+
+#left join to edit quality
+#uk_edit_quality <- left_join(uk_edit_quality, df_merge, by = c("owner"), 
+                                #all.x = TRUE)
+```
+
+```{r}
+#plot average edit quality and reach
+#ggplot(uk_edit_quality, aes(x=total_views, y=ave_edit_quality)) +
+ # geom_point(size=2, shape=21)
+```

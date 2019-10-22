@@ -86,5 +86,8 @@ terms(lda, 5)
 topics<-as.data.frame(terms(lda, 5))
 ```
 
+```{r}
+write.csv(topics, file = "data/uk_gov_topics.csv", fileEncoding = "UTF-8")
+```
 
 
