@@ -1,0 +1,55 @@
+---
+title: "checking dates"
+author: "Pat Healy"
+date: "23 October 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+uk_edits <- fread(file="data/uk_gov_edits_ten_pc.csv", encoding = "UTF-8")
+```
+
+```{r}
+uk_edits_2019 <- dplyr::filter(uk_edits, grepl('2019-05', timestamp))
+```
+
+```{r}
+tenpc <- fread(file = "10pc/anon-10pc.csv", encoding = "UTF-8")
+```
+```{r}
+names(tenpc)[1]<-"x"
+```
+
+```{r}
+tenpc_2019 <- dplyr::filter(tenpc, grepl('2019-05', V5))
+```
+
+```{r}
+ip_may_2019 <- tenpc_2019[["V6"]]
+```
+```{r}
+ip_may_2019 <- as.data.frame(ip_may_2019)
+```
+```{r}
+write.table(ip_may_2019, file = "anon_ip_may_2019.txt", sep = "\t", row.names = FALSE)
+```
+
+```{r}
+checkin_ip <- fread(file = "data/checked.csv", encoding = "UTF-8")
+```
+```{r}
+ip <- checkin_ip[["V3"]]
+```
+
+```{r}
+double_check<-filter(tenpc_2019, V6 %in% ip )
+```
+
+```{r}
+write.csv(uk_edits_2019, file = "data/uk_gov_edits_may_2019.csv", fileEncoding = "UTF-8")
+```
+

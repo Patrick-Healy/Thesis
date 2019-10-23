@@ -5,6 +5,15 @@ date: "22 October 2019"
 output: html_document
 ---
 ```{r}
+#read in uk gov edits
+library(data.table)
+library(utf8)
+uk_gov_edits <- fread(file = "data/uk_gov_edits_may_2019.csv", encoding = "UTF-8")
+names(uk_gov_edits)[1]<-"ID"
+
+```
+
+```{r}
 uk_gov_edits_unique_pages <- uk_gov_edits %>% 
   group_by(page_id) %>%
   slice(1) %>% # takes the first occurrence if there is a tie
@@ -42,9 +51,9 @@ head(page_title_toks_nostop[[1]], 50)
 ```{r}
 page_title_toks1 <- tokens(char_tolower(page_title), remove_punct = TRUE)
 page_title_toks2 <- tokens_remove(page_title_toks1, stopwords("english"))
-page_title_toks3 <- tokens_ngrams(page_title_toks2, 2)
+page_title_toks3 <- tokens_ngrams(page_title_toks2, 1)
 dfmat1<-(dfm(page_title_toks3)) %>%
-   dfm_trim(min_termfreq = 5)
+   dfm_trim(min_termfreq = 1)
 ```
 ```{r}
 print(dfmat1)

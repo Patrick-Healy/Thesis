@@ -1,0 +1,99 @@
+---
+title: "uk gov edit quality"
+author: "Pat Healy"
+date: "22 October 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+library(utf8)
+#read in uk edits
+#uk_edits <- fread(file="data/uk_gov_edits_ten_pc.csv", encoding = "UTF-8")
+```
+```{r}
+#create and save random sample for sampling edit quality and reach
+#uk_edits_random_sample <- uk_edits[sample(nrow(uk_edits), 1000), ]
+#names(uk_edits_random_sample)[1]<-"pop_row"
+
+#write.csv(uk_edits_random_sample, file = "data/uk_edits_random_sample.csv", fileEncoding = "UTF-8")
+```
+```{r}
+#read random sample
+uk_edits_random_sample <- fread(file = "data/uk_edits_random_sample.csv", encoding = "UTF-8")
+
+```
+```{r}
+#replaced unicode in random sample
+
+```
+
+
+```{r}
+#bad page names
+#uk_edits_utf <- dplyr::filter(uk_edits_random_sample, grepl('<', page_title))
+```
+```{r}
+library(stringi)
+
+#string_unicode <- uk_edits_utf[["page_title"]]
+#uk_edits_utf <- cat(stri_unescape_unicode(gsub("<U\\+(....)>", "\\\\u\\1", uk_edits_utf$page_title)))
+#cat(stri_unescape_unicode(gsub("<U\\+(....)>", "\\\\u\\1", string_unicode)))
+```
+```{r}
+uk_gov_edits_2019 <- fread(file = "data/uk_gov_edits_may_2019.csv", encoding = "UTF-8")
+```
+
+
+```{r}
+
+revision_id<-uk_gov_edits_2019[['revision_id']]
+
+```
+
+```{r}
+library(ratelimitr)
+library(foreach)
+f <- function() NULL
+
+# create a version of f that can only be called 50 times per 20 seconds
+f_lim <- limit_rate(f, rate(n = 50, period = 20))
+ ptime <- system.time({
+good_uk<-foreach(i=revision_id) %do%{
+  f_lim()
+  rbind.data.frame(ores::check_goodfaith("enwiki", i))
+}
+})
+ ptime
+```
+
+
+```{r}
+good_uk<-do.call("rbind", good_uk)
+```
+```{r}
+write.csv(good_uk, file = "data/good_intention_may_2019_uk.csv", fileEncoding = "UTF-8")
+```
+```{r}
+ptime2 <- system.time({
+damaging<-foreach(i=revision_id) %do%{
+  f_lim()
+  rbind.data.frame(ores::check_damaging("enwiki", i))
+}
+})
+ ptime2
+```
+
+
+```{r}
+damaging_uk<-do.call("rbind", damaging_uk)
+```
+
+```{r}
+write.csv(damaging_uk, file = "data/damagin_may_2019_uk.csv", fileEncoding = "UTF-8")
+```
+
